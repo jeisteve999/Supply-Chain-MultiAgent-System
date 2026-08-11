@@ -115,3 +115,40 @@ The main architecture is based on a coordinating root agent and specialized supp
              |                           |
              v                           v
         Session State                 Events
+
+
+# Multi-Agent Design
+
+The system uses a coordinating root agent with specialized supply chain capabilities.
+
+### Root Agent
+Coordinates the analysis, selects the appropriate tools, maintains session context, and combines results.
+
+### Inventory Agent
+Provides current inventory and available units.
+
+### Forecast Agent
+Provides forecasted demand for each product.
+
+### Procurement Agent
+Provides incoming supply, purchase orders, status, and expected arrival dates.
+
+### Delivery Agent
+Provides delivery status, quantities, and expected delivery dates.
+
+---
+
+# Risk Analysis
+
+## Supply Risk
+
+Supply risk is calculated using:
+
+- Current inventory
+- Forecasted demand
+- Incoming supply
+
+Potential shortage:
+
+```text
+shortage = max(forecasted_demand - current_inventory, 0)
