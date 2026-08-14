@@ -1,62 +1,81 @@
 from google.adk.agents import Agent
+import pandas as pd
 
-def get_purchase_orders(product_name: str) -> str:
-    """Returns incoming purchase order information for a product."""
 
-    purchase_orders = {
-        "product a": {
-            "incoming_quantity": 50,
-            "status": "In transit",
-            "expected_arrival": "2026-08-14",
-        },
-        "product b": {
-            "incoming_quantity": 30,
-            "status": "Processing",
-            "expected_arrival": "2026-08-16",
-        },
-        "product c": {
-            "incoming_quantity": 100,
-            "status": "In transit",
-            "expected_arrival": "2026-08-18",
-        },
-    }
+DATA_PATH = "data/supply_chain_dataset1.csv"
 
-    product = product_name.lower()
 
-    if product in purchase_orders:
-        order = purchase_orders[product]
+def get_purchase_orders(
+    product_name: str,
+    warehouse_id: str,
+) -> str:
+    """Returns procurement information for a SKU and warehouse."""
 
+    df = pd.read_csv(DATA_PATH)
+
+    product = product_name.upper()
+    warehouse = warehouse_id.upper()
+
+    data = df[
+        (df["SKU_ID"] == product)
+        & (df["Warehouse_ID"] == warehouse)
+    ]
+
+    if data.empty:
         return (
-            f"Product: {product_name}\n"
-            f"Incoming quantity: {order['incoming_quantity']}\n"
-            f"Status: {order['status']}\n"
-            f"Expected arrival: {order['expected_arrival']}"
+            f"No procurement information is available for "
+            f"{product_name} at warehouse {warehouse_id}."
         )
 
-    return f"No purchase order information is available for {product_name}"
+    latest = data.sort_values("Date").iloc[-1]
+
+    return (
+        f"SKU: {latest['SKU_ID']}\n"
+        f"Warehouse: {latest['Warehouse_ID']}\n"
+        f"Supplier: {latest['Supplier_ID']}\n"
+        f"Date: {latest['Date']}\n"
+        f"Order quantity: {latest['Order_Quantity']} units\n"
+        f"Supplier lead time: "
+        f"{latest['Supplier_Lead_Time_Days']} days"
+    )
 
 
 procurement_agent = Agent(
     name="procurement_agent",
-    model="gemini-3.5-flash",
-    description="Specialized agent for procurement and incoming purchase orders.",
+    model="gemini-3.5-flash-lite",
+    description=(
+        "Specialized agent for procurement and "
+        "replenishment analysis."
+    ),
     instruction="""
-You are ProcurementAgent, a specialized supply chain procurement agent.
+You are ProcurementAgent, a specialized supply chain
+procurement and replenishment agent.
 
-Your responsibility is to provide information about purchase orders
-and incoming inventory.
+Your responsibility is to provide accurate procurement
+information available in the dataset.
 
-Use the get_purchase_orders tool when the user asks about:
+Always use the get_purchase_orders tool when the user
+asks about:
+
 - purchase orders
-- incoming inventory
+- order quantities
 - replenishment
-- supplier orders
-- quantities on order
-- expected arrival of purchased products
+- suppliers
+- incoming procurement quantities
+- supplier lead time related to procurement
 
 Never invent procurement data.
 
-If information is unavailable, clearly state that it is unavailable.
+The dataset does not provide:
+
+- purchase order status
+- exact arrival dates
+- shipment tracking
+
+Do not invent these values.
+
+If information is unavailable, clearly state that
+it is unavailable.
 """,
     tools=[get_purchase_orders],
 )

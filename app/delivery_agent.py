@@ -1,61 +1,87 @@
 from google.adk.agents import Agent
+import pandas as pd
 
 
-def get_delivery_status(product_name: str) -> str:
-    """Returns delivery status information for a product."""
+DATA_PATH = "data/supply_chain_dataset1.csv"
 
-    deliveries = {
-        "product a": {
-            "status": "On time",
-            "quantity": 100,
-            "expected_date": "2026-08-12",
-        },
-        "product b": {
-            "status": "Delayed",
-            "quantity": 60,
-            "expected_date": "2026-08-20",
-        },
-        "product c": {
-            "status": "On time",
-            "quantity": 120,
-            "expected_date": "2026-08-17",
-        },
-    }
 
-    product = product_name.lower()
+def get_delivery_status(
+    product_name: str,
+    warehouse_id: str,
+) -> str:
+    """Returns delivery and supplier lead-time information."""
 
-    if product in deliveries:
-        delivery = deliveries[product]
+    df = pd.read_csv(DATA_PATH)
 
+    product = product_name.upper()
+    warehouse = warehouse_id.upper()
+
+    data = df[
+        (df["SKU_ID"] == product)
+        & (df["Warehouse_ID"] == warehouse)
+    ]
+
+    if data.empty:
         return (
-            f"Product: {product_name}\n"
-            f"Delivery status: {delivery['status']}\n"
-            f"Delivery quantity: {delivery['quantity']}\n"
-            f"Expected delivery date: {delivery['expected_date']}"
+            f"No delivery information is available for "
+            f"{product_name} at warehouse {warehouse_id}."
         )
 
-    return f"No delivery information is available for {product_name}"
+    latest = data.sort_values("Date").iloc[-1]
+
+    return (
+        f"SKU: {latest['SKU_ID']}\n"
+        f"Warehouse: {latest['Warehouse_ID']}\n"
+        f"Supplier: {latest['Supplier_ID']}\n"
+        f"Date: {latest['Date']}\n"
+        f"Supplier lead time: "
+        f"{latest['Supplier_Lead_Time_Days']} days"
+    )
 
 
 delivery_agent = Agent(
     name="delivery_agent",
-    model="gemini-3.5-flash",
-    description="Specialized agent for delivery and shipment status analysis.",
+    model="gemini-3.5-flash-lite",
+    description=(
+        "Specialized agent for supplier lead-time "
+        "and delivery timing analysis."
+    ),
     instruction="""
-You are DeliveryAgent.
+You are DeliveryAgent, a specialized supply chain
+delivery and supplier lead-time agent.
 
-Your responsibility is to analyze delivery and shipment status.
+Your responsibility is to provide accurate information
+about supplier lead times and delivery timing metrics
+available in the dataset.
 
-Use the get_delivery_status tool when the user asks about:
-- delivery status
+Always use the get_delivery_status tool when the user
+asks about:
+
+- delivery information
+- supplier lead time
+- delivery timing
+- supplier delivery performance
+
+Never invent delivery data.
+
+The dataset does not provide:
+
+- actual delivery dates
 - shipment status
-- expected delivery dates
-- delayed deliveries
-- delivered quantities
+- delayed/on-time status
+- tracking information
 
-Never invent delivery information.
-If there is no information for a product, clearly state that
-no delivery information is available.
+Therefore, never invent values such as:
+
+- "On time"
+- "Delayed"
+- "In transit"
+
+Use Supplier_Lead_Time_Days as the available
+delivery-timing metric.
+
+If information is unavailable, clearly state that
+it is unavailable.
 """,
     tools=[get_delivery_status],
 )

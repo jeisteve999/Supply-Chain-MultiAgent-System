@@ -1,128 +1,112 @@
 def analyze_supply_risk(
-    inventory: int,
-    forecast: int,
-    incoming: int,
+    inventory_level: float,
+    demand_forecast: float,
+    incoming_supply: float = 0,
 ) -> str:
-    """Analyzes supply risk based on inventory, demand and incoming supply."""
+    """
+    Analyzes supply risk using current inventory,
+    forecasted demand, and incoming supply.
+    """
 
-    shortage = forecast - inventory
+    projected_inventory = (
+        inventory_level + incoming_supply - demand_forecast
+    )
 
-    if shortage <= 0:
-        surplus = abs(shortage)
+    potential_shortage = max(-projected_inventory, 0)
 
-        return (
-            "Supply Risk: LOW\n"
-            f"Current inventory: {inventory} units\n"
-            f"Forecasted demand: {forecast} units\n"
-            f"Incoming supply: {incoming} units\n"
-            "There is no potential shortage.\n"
-            f"Current inventory surplus: {surplus} units.\n"
-            "Recommendation: Continue monitoring inventory and demand."
-        )
-
-    if incoming >= shortage:
-        remaining_inventory = (
-            inventory + incoming - forecast
-        )
-
-        return (
-            "Supply Risk: LOW\n"
-            f"Current inventory: {inventory} units\n"
-            f"Forecasted demand: {forecast} units\n"
-            f"Incoming supply: {incoming} units\n"
-            f"Potential shortage before replenishment: {shortage} units.\n"
-            "Incoming supply covers the shortage.\n"
-            f"Projected remaining inventory after forecasted demand: "
-            f"{remaining_inventory} units.\n"
-            "Recommendation: Monitor the incoming shipment and "
-            "confirm that it arrives before the forecasted demand period."
-        )
-
-    remaining_shortage = shortage - incoming
+    if projected_inventory < 0:
+        risk = "HIGH"
+    elif projected_inventory <= demand_forecast * 0.25:
+        risk = "MEDIUM"
+    else:
+        risk = "LOW"
 
     return (
-        "Supply Risk: HIGH\n"
-        f"Current inventory: {inventory} units\n"
-        f"Forecasted demand: {forecast} units\n"
-        f"Incoming supply: {incoming} units\n"
-        f"Potential shortage: {shortage} units.\n"
-        "Incoming supply is not sufficient.\n"
-        f"Remaining shortage after incoming supply: "
-        f"{remaining_shortage} units.\n"
-        "Recommendation: Review replenishment options and "
-        "consider expediting additional supply."
+        f"Supply Risk: {risk}\n"
+        f"Current Inventory: {inventory_level} units\n"
+        f"Forecasted Demand: {demand_forecast} units\n"
+        f"Incoming Supply: {incoming_supply} units\n"
+        f"Potential Shortage: {potential_shortage} units\n"
+        f"Projected Inventory: {projected_inventory} units"
     )
 
 
 def analyze_delivery_risk(
-    delivery_status: str,
+    supplier_lead_time_days: float,
 ) -> str:
-    """Analyzes delivery risk based on delivery status."""
+    """
+    Analyzes delivery risk using supplier lead time.
+    """
 
-    status = delivery_status.lower()
-
-    if status == "delayed":
-        return (
-            "Delivery Risk: HIGH\n"
-            "The delivery is delayed. "
-            "Review the shipment and consider corrective action."
-        )
-
-    if status == "on time":
-        return (
-            "Delivery Risk: LOW\n"
-            "The delivery is currently on schedule."
-        )
+    if supplier_lead_time_days <= 7:
+        risk = "LOW"
+    elif supplier_lead_time_days <= 14:
+        risk = "MEDIUM"
+    else:
+        risk = "HIGH"
 
     return (
-        "Delivery Risk: UNKNOWN\n"
-        "The delivery status could not be clearly evaluated."
+        f"Delivery Risk: {risk}\n"
+        f"Supplier Lead Time: {supplier_lead_time_days} days"
     )
+
+
+def analyze_overall_risk(
+    supply_risk: str,
+    delivery_risk: str,
+) -> str:
+    """
+    Determines the overall supply chain risk.
+    """
+
+    if "HIGH" in supply_risk and "HIGH" in delivery_risk:
+        overall_risk = "CRITICAL"
+    elif "HIGH" in supply_risk or "HIGH" in delivery_risk:
+        overall_risk = "HIGH"
+    elif "MEDIUM" in supply_risk or "MEDIUM" in delivery_risk:
+        overall_risk = "MEDIUM"
+    else:
+        overall_risk = "LOW"
+
+    return f"Overall Supply Chain Risk: {overall_risk}"
 
 
 def generate_supply_chain_recommendation(
     supply_risk: str,
     delivery_risk: str,
+    overall_risk: str,
 ) -> str:
-    """Generates an overall supply chain recommendation."""
+    """
+    Generates an operational recommendation based on supply chain risk.
+    """
 
-    supply = supply_risk.upper()
-    delivery = delivery_risk.upper()
-
-    if supply == "HIGH" and delivery == "HIGH":
-        return (
-            "Overall Supply Chain Risk: CRITICAL\n"
-            "The product has both a supply shortage and a "
-            "delivery risk. Review replenishment options, "
-            "expedite incoming shipments, and monitor the "
-            "delivery closely."
+    if overall_risk == "CRITICAL":
+        recommendation = (
+            "Immediate action required. Review inventory, "
+            "accelerate replenishment, and investigate supplier lead time."
         )
 
-    if supply == "HIGH" and delivery == "LOW":
-        return (
-            "Overall Supply Chain Risk: HIGH\n"
-            "The product has a supply shortage, but the "
-            "delivery is currently on schedule. "
-            "Review additional replenishment options."
+    elif overall_risk == "HIGH":
+        recommendation = (
+            "High risk detected. Review replenishment requirements "
+            "and supplier delivery lead time."
         )
 
-    if supply == "LOW" and delivery == "HIGH":
-        return (
-            "Overall Supply Chain Risk: HIGH\n"
-            "Supply is currently sufficient, but the delivery "
-            "is delayed. Monitor the shipment and evaluate "
-            "alternative delivery options if necessary."
+    elif overall_risk == "MEDIUM":
+        recommendation = (
+            "Moderate risk detected. Monitor inventory levels, "
+            "demand forecasts, and supplier lead time."
         )
 
-    if supply == "LOW" and delivery == "LOW":
-        return (
-            "Overall Supply Chain Risk: LOW\n"
-            "Supply and delivery are currently under control. "
-            "Continue monitoring inventory and incoming shipments."
+    else:
+        recommendation = (
+            "Supply chain conditions are currently stable. "
+            "Continue monitoring inventory, demand, and replenishment."
         )
 
     return (
-        "Overall Supply Chain Risk: UNKNOWN\n"
-        "There is insufficient information to determine the "
-        "overall supply chain risk."
+        f"Supply Risk: {supply_risk}\n"
+        f"Delivery Risk: {delivery_risk}\n"
+        f"Overall Risk: {overall_risk}\n"
+        f"Recommendation: {recommendation}"
     )
