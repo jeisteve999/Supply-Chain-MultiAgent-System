@@ -149,5 +149,4 @@ Supply risk is calculated using:
 
 Potential shortage:
 
-```text
 shortage = max(forecasted_demand - current_inventory, 0)
